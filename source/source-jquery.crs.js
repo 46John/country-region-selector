@@ -97,13 +97,15 @@
       if (defaultSelectedValue && countryElement.selectedIndex > 0) {
         _populateRegionFields(countryElement, regionElement);
 
-        var defaultRegionSelectedValue = $(regionElement).attr("data-default-value");
+        var defaultRegionSelectedValue = _extractSelectedRegions(regionElement);
 
         var useShortcode = (regionElement.getAttribute("data-value") === "shortcode");
         if (defaultRegionSelectedValue !== null) {
           var index = (_showEmptyCountryOption) ? countryElement.selectedIndex - 1 : countryElement.selectedIndex;
           var data = _countries[index][3];
-          _setDefaultRegionValue(regionElement, data, defaultRegionSelectedValue, useShortcode);
+          for (var l=0, ll=defaultRegionSelectedValue.length; l < ll; l+=1) {
+            _setDefaultRegionValue(regionElement, data, defaultRegionSelectedValue[l], useShortcode);
+          }
         }
       } else if (_showEmptyCountryOption === false) {
         _populateRegionFields(countryElement, regionElement);
@@ -118,7 +120,7 @@
 	var _initRegionField = function(el) {
 		var customOptionStr = $(el).attr("data-blank-option");
 		var defaultOptionStr = customOptionStr ? customOptionStr : "-";
-    var showEmptyOption = el.getAttribute("data-show-default-option");
+    var showEmptyOption = !el.multiple && el.getAttribute("data-show-default-option");
     _showEmptyRegionOption = (showEmptyOption === null) ? true : (showEmptyOption === "true");
 
 		el.length = 0;
@@ -171,15 +173,28 @@
     }
   };
 
-  var _setDefaultRegionValue = function(field, data, val, useShortcode) {
-    for (var i=0; i<data.regions.length; i++) {
-      var currVal = (useShortcode && data.hasShortcodes && data.regions[i][1]) ? data.regions[i][1] : data.regions[i][0];
-      if (currVal === val) {
-        field.selectedIndex = (_showEmptyRegionOption) ? i + 1 : i;
-        break;
-      }
+  var _extractSelectedRegions = function(regionElement) {
+    var values;
+    if (values = $(regionElement).attr("data-default-values")) {
+      return values.split(',');
+    } else if (values = $(regionElement).attr("data-default-value")) {
+      // wrap single values in array, so we can always treat them the same
+      return [values];
     }
-  };
+  }
+
+	var _setDefaultRegionValue = function(field, data, val, useShortcode) {
+		var idx;
+    var showEmpty = !field.multiple && _showEmptyRegionOption;
+		for (var i=0; i<data.regions.length; i++) {
+			var currVal = (useShortcode && data.hasShortcodes && data.regions[i][1]) ? data.regions[i][1] : data.regions[i][0];
+			if (currVal === val) {
+				idx = (showEmpty) ? i + 1 : i;
+				field.options[idx].selected = 'selected';
+				break;
+			}
+		}
+	};
 
 	var _populateRegionFields = function(countryElement, regionElement) {
     var selectedCountryIndex = (_showEmptyCountryOption) ? countryElement.selectedIndex-1 : countryElement.selectedIndex;
@@ -200,7 +215,7 @@
         regionElement.options[regionElement.length] = new Option(regionData.regions[i][0], val);
       }
 
-			regionElement.selectedIndex = 0;
+			if (!regionElement.multiple) { regionElement.selectedIndex = 0 };
 		}
 	};
 
